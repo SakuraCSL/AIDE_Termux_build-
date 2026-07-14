@@ -76,6 +76,7 @@ bash install.sh
 AIDE_Termux_build-/
 ├── README.md                # 项目说明文档
 ├── install.sh               # 一键安装脚本（主程序）
+├── 测试项目.zip             # 示例 Android 项目（用于验证构建环境）
 ├── android-ndk-r24-aarch64.zip   # NDK r24 离线包
 ├── android-ndk-r29-aarch64.tar.xz # NDK r29 离线包
 ├── android-sdk.tar.xz                # Android SDK 离线包
@@ -113,12 +114,12 @@ echo $GRADLE_HOME
 
 ## 🛠️ 使用已安装环境
 
-安装完成后，你可以：
+安装完成后，你可以使用仓库提供的测试项目进行验证：
 
 ```bash
-# 克隆一个 Android 项目
-git clone https://github.com/username/project.git
-cd project
+# 解压测试项目
+unzip 测试项目.zip
+cd 测试项目
 
 # 构建 APK
 gradle assembleDebug
