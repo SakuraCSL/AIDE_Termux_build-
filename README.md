@@ -119,7 +119,7 @@ echo $GRADLE_HOME
 
 ```bash
 # 下载测试项目（从 Releases 下载最新版本）
-wget https://github.com/SakuraCSL/AIDE_Termux_build-/releases/latest/download/测试项目.zip
+wget https://github.com/SakuraCSL/AIDE_Termux_build-/releases/latest/download/test-project.zip
 
 # 解压测试项目
 unzip 测试项目.zip
