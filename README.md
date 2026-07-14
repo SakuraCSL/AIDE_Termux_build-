@@ -76,8 +76,9 @@ bash install.sh
 AIDE_Termux_build-/
 ├── README.md          # 项目说明文档
 ├── install.sh         # 一键安装脚本（主程序）
-├── android-ndk-r24-aarch64.zip   # NDK r24 离线包
-├── android-ndk-r29-aarch64.tar.xz # NDK r29 离线包
+├── r24/               # NDK r24 离线包目录（待补充）
+├── r29/               # NDK r29 离线包目录
+│   └── android-ndk-r29-aarch64.tar.xz
 ├── android-sdk.tar.xz            # Android SDK 离线包
 ├── gradle.tar.xz                 # Gradle 8.13 离线包
 └── JDK_21.tar.xz                 # OpenJDK 21 离线包
