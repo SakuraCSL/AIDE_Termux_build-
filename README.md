@@ -81,8 +81,6 @@ AIDE_Termux_build-/
 ├── android-sdk.tar.xz                # Android SDK 离线包
 ├── gradle.tar.xz                     # Gradle 8.13 离线包
 └── JDK_21.tar.xz                     # OpenJDK 21 离线包
-
-📦 测试项目.zip 请从 [Releases](../../releases) 下载
 ```
 
 ## 🎯 安装流程
@@ -115,15 +113,12 @@ echo $GRADLE_HOME
 
 ## 🛠️ 使用已安装环境
 
-安装完成后，你可以使用仓库提供的测试项目进行验证：
+安装完成后，你可以克隆任意 Android 项目进行构建：
 
 ```bash
-# 下载测试项目（从 Releases 下载最新版本）
-wget https://github.com/SakuraCSL/AIDE_Termux_build-/releases/latest/download/test-project.zip
-
-# 解压测试项目
-unzip 测试项目.zip
-cd 测试项目
+# 克隆一个 Android 项目
+git clone https://github.com/username/project.git
+cd project
 
 # 构建 APK
 gradle assembleDebug
