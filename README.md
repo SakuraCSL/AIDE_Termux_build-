@@ -132,6 +132,9 @@ echo $GRADLE_HOME
 安装完成后，你可以使用仓库提供的测试项目进行验证：
 
 ```bash
+# 下载测试项目（从 Release v2.0）
+wget https://github.com/SakuraCSL/AIDE_Termux_build-/releases/download/v2.0/test-project.zip
+
 # 解压测试项目
 unzip test-project.zip
 cd test-project
