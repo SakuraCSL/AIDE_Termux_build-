@@ -15,13 +15,14 @@
 | ✅ **完整性检查** | 自动验证所有组件是否正确安装 |
 | 🔒 **防重复运行** | 锁文件机制避免并发/重复执行 |
 | 🛠️ **镜像修复** | 自动切换清华/中科大镜像解决网络问题 |
-| 📦 **离线包支持** | 提供预编译压缩包，加速部署 |
+| 📦 **离线安装** | 提供本地安装脚本，无需网络即可部署 |
+| 🎯 **NDK 可选** | 支持选择 NDK r24 或 r29，或两者都装 |
 
 ## 📦 环境要求
 
 - **设备**：Android 6.0+ arm64 设备
 - **存储**：至少 10GB 可用空间（建议 15GB+）
-- **网络**：需要联网下载组件（或使用本地离线包）
+- **网络**：在线安装需要联网，或使用本地离线包
 - **Termux**：最新版（建议从 F-Droid 安装）
 
 ## 🚀 快速开始
@@ -40,19 +41,36 @@ bash install.sh
 source ~/.bashrc  # 或 source ~/.zshrc
 ```
 
-### 方式二：离线安装
+### 方式二：本地离线安装
 
 如果网络不佳，可直接使用仓库中的预编译包：
 
 ```bash
-# 确保以下文件已存在于仓库目录：
-# - android-ndk-r24-aarch64.zip
-# - android-ndk-r29-aarch64.tar.xz
-# - android-sdk.tar.xz
-# - gradle.tar.xz
-# - JDK_21.tar.xz
+# 1. 克隆仓库
+git clone https://github.com/SakuraCSL/AIDE_Termux_build-.git
+cd AIDE_Termux_build-
 
-bash install.sh
+# 2. 运行本地安装脚本
+bash local_install.sh
+
+# 3. 使环境变量生效
+source ~/.bashrc  # 或 source ~/.zshrc
+```
+
+## 📁 仓库文件说明
+
+```
+AIDE_Termux_build-/
+├── README.md                # 项目说明文档
+├── install.sh               # 在线安装脚本（从网络下载）
+├── local_install.sh         # 本地安装脚本（使用离线包）
+├── test-project/            # 示例 Android 项目源码
+├── test-project.zip         # 示例项目压缩包
+├── JDK_21.tar.gz            # OpenJDK 21 离线包
+├── gradle.tar.gz            # Gradle 8.13 离线包
+├── android-sdk.tar.gz       # Android SDK 离线包
+├── android-ndk-r24-aarch64.zip # NDK r24 离线包
+└── android-ndk-r29-aarch64.tar.gz # NDK r29 离线包
 ```
 
 ## 🔧 安装内容
@@ -70,29 +88,25 @@ bash install.sh
 | build-tools | 34.0.0 | aapt、dx、zipalign 等 |
 | platforms | android-34 | Android 14 编译目标 |
 
-## 📁 仓库文件说明
-
-```
-AIDE_Termux_build-/
-├── README.md                # 项目说明文档
-├── install.sh               # 一键安装脚本（主程序）
-├── android-ndk-r24-aarch64.zip   # NDK r24 离线包
-├── android-ndk-r29-aarch64.tar.xz # NDK r29 离线包
-├── android-sdk.tar.xz                # Android SDK 离线包
-├── gradle.tar.xz                     # Gradle 8.13 离线包
-└── JDK_21.tar.xz                     # OpenJDK 21 离线包
-```
-
 ## 🎯 安装流程
 
-脚本按以下步骤自动执行：
+### 在线安装（install.sh）
 
-1. **检查基础依赖** - 安装 OpenJDK 21、wget、unzip、aapt2
+1. **检查基础依赖** - 安装 OpenJDK 21、wget、unzip、xz-utils、aapt2
 2. **安装 cmdline-tools** - Android SDK 命令行工具
 3. **安装 Gradle** - 项目构建工具
-4. **安装 NDK** - 原生开发工具包（含 arm64 兼容性修复）
-5. **配置环境变量** - 自动写入 `~/.bashrc` 或 `~/.zshrc`
-6. **安装 SDK 组件** - platform-tools、platforms、build-tools
+4. **配置环境变量** - 自动写入 `~/.bashrc` 或 `~/.zshrc`
+5. **安装 SDK 组件** - platform-tools、platforms、build-tools
+6. **选择 NDK** - 可选择 r24、r29 或两者都安装
+
+### 本地安装（local_install.sh）
+
+1. **解压 JDK** - 从 `JDK_21.tar.gz` 解压到 `~/jdk`
+2. **解压 Gradle** - 从 `gradle.tar.gz` 解压到 `~/gradle`
+3. **解压 Android SDK** - 从 `android-sdk.tar.gz` 解压到 `~/android-sdk`
+4. **配置环境变量** - 自动写入 `~/.bashrc` 或 `~/.zshrc`
+5. **修复 aapt2** - 确保 AGP 使用 arm64 原生 aapt2
+6. **选择 NDK** - 可选择安装 r24、r29 或跳过
 
 ## ✅ 验证安装
 
@@ -113,12 +127,12 @@ echo $GRADLE_HOME
 
 ## 🛠️ 使用已安装环境
 
-安装完成后，你可以克隆任意 Android 项目进行构建：
+安装完成后，你可以使用仓库提供的测试项目进行验证：
 
 ```bash
-# 克隆一个 Android 项目
-git clone https://github.com/username/project.git
-cd project
+# 解压测试项目
+unzip test-project.zip
+cd test-project
 
 # 构建 APK
 gradle assembleDebug
@@ -131,29 +145,42 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 
 ### 1. 下载失败怎么办？
 
-脚本已内置：
+在线脚本已内置：
 - `wget --show-progress -c` 断点续传
 - 自动切换清华/中科大镜像
 - 完整性检查（空文件检测）
 
 若仍失败，可：
 - 更换网络环境（建议使用 WiFi）
-- 使用方式二的离线包
+- 使用方式二的本地离线安装
 
 ### 2. 提示 "Permission denied"
 
 确保脚本有执行权限：
 ```bash
-chmod +x install.sh
+chmod +x install.sh local_install.sh
 ```
 
 ### 3. 如何卸载？
 
+#### 在线安装卸载
+```bash
+bash install.sh
+# 选择 2) 卸载
+```
+
+#### 本地安装卸载
+```bash
+bash local_install.sh
+# 选择 2) 卸载
+```
+
+或手动清理：
 ```bash
 # 删除环境目录
 rm -rf ~/android-sdk
-rm -rf ~/gradle-8.13
-rm -rf ~/android-ndk
+rm -rf ~/gradle
+rm -rf ~/jdk
 
 # 清理环境变量（手动编辑 ~/.bashrc 或 ~/.zshrc）
 sed -i '/ANDROID_HOME/d' ~/.bashrc
@@ -161,7 +188,7 @@ sed -i '/GRADLE_HOME/d' ~/.bashrc
 sed -i '/ANDROID_NDK_HOME/d' ~/.bashrc
 ```
 
-### 4. NDK r24 符号链接修复
+### 4. NDK 符号链接修复
 
 脚本已自动创建以下符号链接，解决 AGP 在 arm64 主机上找不到预编译工具的问题：
 - `ndk/prebuilt/linux-x86_64` → `linux-aarch64`
@@ -177,6 +204,7 @@ sed -i '/ANDROID_NDK_HOME/d' ~/.bashrc
 - **内存要求**：编译时需要足够 RAM，建议 4GB+ 内存设备
 - **Termux 版本**：请从 F-Droid 安装最新版，避免 Play 商店旧版问题
 - **镜像源**：国内用户建议配置清华或中科大镜像加速下载
+- **本地安装**：确保所有 `.tar.gz` 和 `.zip` 文件完整且未损坏
 
 ## 🤝 贡献
 
