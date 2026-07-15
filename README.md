@@ -41,16 +41,16 @@ bash install.sh
 source ~/.bashrc  # 或 source ~/.zshrc
 ```
 
-### 方式二：本地离线安装
+### 方式二：网络安装（使用 Release 资产）
 
-如果网络不佳，可直接使用仓库中的预编译包：
+如果在线安装失败，可使用此脚本从 Release Assets 下载所有组件：
 
 ```bash
 # 1. 克隆仓库
 git clone https://github.com/SakuraCSL/AIDE_Termux_build-.git
 cd AIDE_Termux_build-
 
-# 2. 运行本地安装脚本
+# 2. 运行网络安装脚本
 bash local_install.sh
 
 # 3. 使环境变量生效
@@ -63,14 +63,14 @@ source ~/.bashrc  # 或 source ~/.zshrc
 AIDE_Termux_build-/
 ├── README.md                # 项目说明文档
 ├── install.sh               # 在线安装脚本（从网络下载）
-├── local_install.sh         # 本地安装脚本（使用离线包）
+├── local_install.sh         # 网络安装脚本（从 Release Assets 下载）
 ├── test-project/            # 示例 Android 项目源码
 ├── test-project.zip         # 示例项目压缩包
-├── JDK_21.tar.gz            # OpenJDK 21 离线包
-├── gradle.tar.gz            # Gradle 8.13 离线包
-├── android-sdk.tar.gz       # Android SDK 离线包
-├── android-ndk-r24-aarch64.zip # NDK r24 离线包
-└── android-ndk-r29-aarch64.tar.gz # NDK r29 离线包
+├── JDK_21.tar.gz            # OpenJDK 21 离线包（Release 资产）
+├── gradle.tar.gz            # Gradle 8.13 离线包（Release 资产）
+├── android-sdk.tar.gz       # Android SDK 离线包（Release 资产）
+├── android-ndk-r24-aarch64.zip # NDK r24 离线包（Release 资产）
+└── android-ndk-r29-aarch64.tar.gz # NDK r29 离线包（Release 资产）
 ```
 
 ## 🔧 安装内容
@@ -99,14 +99,16 @@ AIDE_Termux_build-/
 5. **安装 SDK 组件** - platform-tools、platforms、build-tools
 6. **选择 NDK** - 可选择 r24、r29 或两者都安装
 
-### 本地安装（local_install.sh）
+### 网络安装（local_install.sh）
 
-1. **解压 JDK** - 从 `JDK_21.tar.gz` 解压到 `~/jdk`
-2. **解压 Gradle** - 从 `gradle.tar.gz` 解压到 `~/gradle`
-3. **解压 Android SDK** - 从 `android-sdk.tar.gz` 解压到 `~/android-sdk`
+从 Release Assets 下载所有离线包并安装：
+
+1. **下载 JDK** - 从 Release v2.0 下载 `JDK_21.tar.gz` 并解压到 `~/jdk`
+2. **下载 Gradle** - 从 Release v2.0 下载 `gradle.tar.gz` 并解压到 `~/gradle`
+3. **下载 Android SDK** - 从 Release v2.0 下载 `android-sdk.tar.gz` 并解压到 `~/android-sdk`
 4. **配置环境变量** - 自动写入 `~/.bashrc` 或 `~/.zshrc`
 5. **修复 aapt2** - 确保 AGP 使用 arm64 原生 aapt2
-6. **选择 NDK** - 可选择安装 r24、r29 或跳过
+6. **选择 NDK** - 可选择下载安装 r24、r29 或跳过
 
 ## ✅ 验证安装
 
