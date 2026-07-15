@@ -2,24 +2,26 @@
 set -uo pipefail
 
 # ============================================================
-# 一键安装 Android 开发环境 (Termux)
+# Android 开发环境一键安装 (Termux)
 # 支持断点续传、跳过已安装、完整性检查
-# 修改点：下载显示进度条（--show-progress）+ 续传（-c）
+# 修改：增加互动菜单、支持卸载、NDK r24/r29选择
 # ============================================================
 
 # 配置
-readonly ANDROID_HOME="$HOME/android-sdk"
-readonly GRADLE_HOME="$HOME/gradle-8.13/gradle-8.13"
-readonly ANDROID_NDK_HOME="$ANDROID_HOME/ndk/24.0.8215888"
-readonly LOCK_FILE="$HOME/.android_env_install.lock"
+ANDROID_HOME="$HOME/android-sdk"
+GRADLE_HOME="$HOME/gradle-8.13/gradle-8.13"
+ANDROID_NDK_HOME_R24="$ANDROID_HOME/ndk/24.0.8215888"
+ANDROID_NDK_HOME_R29="$ANDROID_HOME/ndk/29.0.13113456"
+LOCK_FILE="$HOME/.android_env_install.lock"
 
-readonly CMDLINE_TOOLS_VERSION="11076708"
-readonly GRADLE_VERSION="8.13"
-readonly NDK_VERSION="24.0.8215888"
+CMDLINE_TOOLS_VERSION="11076708"
+GRADLE_VERSION="8.13"
+NDK_R24_VERSION="24.0.8215888"
 
 readonly CMDLINE_URL="https://dl.google.com/android/repository/commandlinetools-linux-${CMDLINE_TOOLS_VERSION}_latest.zip"
 readonly GRADLE_URL="https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-all.zip"
-readonly NDK_URL="https://github.com/jzinferno2/termux-ndk/releases/download/v1/android-ndk-r24-aarch64.zip"
+readonly NDK_R24_URL="https://github.com/jzinferno2/termux-ndk/releases/download/v1/android-ndk-r24-aarch64.zip"
+readonly NDK_R29_URL="https://github.com/AndroidIDE-CN/resource/releases/download/aidepro/ndk.tar.xz"
 
 # 日志
 log() {
@@ -54,11 +56,6 @@ release_lock() {
 # 检查命令是否存在
 has_cmd() {
     command -v "$1" >/dev/null 2>&1
-}
-
-# 检查目录是否完整（关键文件是否存在）
-dir_has() {
-    [ -d "$1" ] && [ -n "$(find "$1" -maxdepth 1 -type f 2>/dev/null)" ]
 }
 
 # 修复 Termux 镜像源
@@ -101,7 +98,7 @@ EOF
 # 1. 基础依赖
 # ============================================================
 install_dependencies() {
-    log "[1/6] 检查基础依赖..."
+    log "[1/5] 检查基础依赖..."
     
     if ! has_cmd pkg; then
         error_exit "pkg 命令不存在，请确保在 Termux 环境中运行此脚本"
@@ -146,6 +143,19 @@ install_dependencies() {
         fi
     fi
     
+    # xz-utils (用于解压 tar.xz)
+    if has_cmd xz; then
+        log "  xz-utils 已安装 ✓"
+    else
+        log "  安装 xz-utils..."
+        if ! pkg install -y xz-utils; then
+            log "  安装失败，尝试修复镜像..."
+            fix_termux_mirror tuna || fix_termux_mirror ustc
+            pkg update -y
+            pkg install -y xz-utils || error_exit "安装 xz-utils 失败"
+        fi
+    fi
+    
     # 额外依赖：确保 SDK 工具二进制能运行
     if ! pkg list-installed libc++ 2>/dev/null | grep -q libc++; then
         log "  安装 libc++..."
@@ -165,7 +175,7 @@ install_dependencies() {
 # 2. cmdline-tools
 # ============================================================
 install_cmdline_tools() {
-    log "[2/6] 检查 Android SDK cmdline-tools..."
+    log "[2/5] 检查 Android SDK cmdline-tools..."
     local target_dir="$ANDROID_HOME/cmdline-tools/latest"
     local zip_file="$ANDROID_HOME/cmdline-tools/cmdline-tools.zip"
     
@@ -175,12 +185,10 @@ install_cmdline_tools() {
     fi
     
     mkdir -p "$ANDROID_HOME/cmdline-tools"
-    # 清理不完整安装（保留已下载的zip）
     rm -rf "$ANDROID_HOME/cmdline-tools/latest" "$ANDROID_HOME/cmdline-tools/cmdline-tools"
     
     cd "$ANDROID_HOME/cmdline-tools"
     log "  下载 cmdline-tools..."
-    # 修改：显示进度 + 断点续传（去掉 2>/dev/null）
     wget --show-progress -c -O "$zip_file" "$CMDLINE_URL" || \
         error_exit "下载 cmdline-tools 失败，请检查网络"
     
@@ -204,7 +212,7 @@ install_cmdline_tools() {
 # 3. Gradle
 # ============================================================
 install_gradle() {
-    log "[3/6] 检查 Gradle ${GRADLE_VERSION}..."
+    log "[3/5] 检查 Gradle ${GRADLE_VERSION}..."
     if [ -x "$GRADLE_HOME/bin/gradle" ]; then
         log "  Gradle ${GRADLE_VERSION} 已存在 ✓"
         return 0
@@ -215,7 +223,6 @@ install_gradle() {
     
     cd "$HOME/gradle-${GRADLE_VERSION}"
     log "  下载 Gradle ${GRADLE_VERSION}..."
-    # 修改：显示进度 + 断点续传（去掉 2>/dev/null）
     wget --show-progress -c -O "$zip_file" "$GRADLE_URL" || \
         error_exit "下载 Gradle 失败，请检查网络"
     
@@ -236,73 +243,28 @@ install_gradle() {
 }
 
 # ============================================================
-# 4. NDK r24
-# ============================================================
-install_ndk() {
-    log "[4/6] 检查 NDK r24 (aarch64)..."
-    if [ -x "$ANDROID_NDK_HOME/ndk-build" ]; then
-        log "  NDK r24 已存在 ✓"
-        return 0
-    fi
-    
-    mkdir -p "$ANDROID_HOME/ndk"
-    local zip_file="$ANDROID_HOME/ndk/android-ndk-r24-aarch64.zip"
-    
-    cd "$ANDROID_HOME/ndk"
-    log "  下载 NDK r24 (aarch64)..."
-    # 修改：显示进度 + 断点续传（去掉 2>/dev/null）
-    wget --show-progress -c -O "$zip_file" "$NDK_URL" || \
-        error_exit "下载 NDK 失败，请检查网络"
-    
-    if [ ! -s "$zip_file" ]; then
-        error_exit "NDK 下载文件为空，请检查网络"
-    fi
-    
-    log "  解压 NDK..."
-    rm -rf "24.0.8215888" "android-ndk-r24"
-    unzip -q -o "$zip_file" || error_exit "解压 NDK 失败"
-    mv android-ndk-r24 "24.0.8215888"
-    rm -f "$zip_file"
-    
-    if [ -x "$ANDROID_NDK_HOME/ndk-build" ]; then
-        log "  NDK r24 安装完成 ✓"
-    else
-        error_exit "NDK 安装不完整"
-    fi
-    
-    # Fix: NDK r24 uses linux-aarch64, but AGP expects linux-x86_64
-    log "  修复 NDK r24 arm64 主机兼容性..."
-    ln -sf linux-aarch64 "$ANDROID_NDK_HOME/prebuilt/linux-x86_64"
-    ln -sf linux-aarch64 "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64"
-    log "  NDK 符号链接修复完成 ✓"
-}
-
-# ============================================================
-# 5. 环境变量
+# 4. 环境变量
 # ============================================================
 configure_env() {
-    log "[5/6] 配置环境变量..."
+    log "[4/5] 配置环境变量..."
     
     local BASHRC="$HOME/.bashrc"
     [ -f "$HOME/.zshrc" ] && BASHRC="$HOME/.zshrc"
     
     # 先删除旧的 Android 相关环境变量，避免重复或路径污染
-    sed -i '/^export ANDROID_HOME=/d' "$BASHRC" 2>/dev/null
-    sed -i '/^export GRADLE_HOME=/d' "$BASHRC" 2>/dev/null
-    sed -i '/^export ANDROID_NDK_HOME=/d' "$BASHRC" 2>/dev/null
-    sed -i '/^export PATH=.*android-sdk\/cmdline-tools/d' "$BASHRC" 2>/dev/null
-    sed -i '/^export PATH=.*gradle/d' "$BASHRC" 2>/dev/null
-    sed -i '/^export PATH=.*android-ndk/d' "$BASHRC" 2>/dev/null
+    sed -i '/^export ANDROID_HOME=/d' "$BASHRC" 2>/dev/null || true
+    sed -i '/^export GRADLE_HOME=/d' "$BASHRC" 2>/dev/null || true
+    sed -i '/^export ANDROID_NDK_HOME=/d' "$BASHRC" 2>/dev/null || true
+    sed -i '/^export PATH=.*android-sdk\/cmdline-tools/d' "$BASHRC" 2>/dev/null || true
+    sed -i '/^export PATH=.*gradle/d' "$BASHRC" 2>/dev/null || true
+    sed -i '/^export PATH=.*android-ndk/d' "$BASHRC" 2>/dev/null || true
     
-    # 写入新变量
+    # 写入新变量（不指定具体 NDK 版本，由外部设置）
     local -a env_lines=(
         "export ANDROID_HOME=$HOME/android-sdk"
         "export GRADLE_HOME=$HOME/gradle-8.13/gradle-8.13"
-        "export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/24.0.8215888"
         'export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH'
         'export PATH=$GRADLE_HOME/bin:$PATH'
-        'export PATH=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-aarch64/bin:$PATH'
-        'export PATH=$ANDROID_NDK_HOME:$PATH'
     )
     
     for line in "${env_lines[@]}"; do
@@ -312,12 +274,11 @@ configure_env() {
     # 当前会话也生效
     export ANDROID_HOME
     export GRADLE_HOME
-    export ANDROID_NDK_HOME
-    export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$GRADLE_HOME/bin:$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-aarch64/bin:$ANDROID_NDK_HOME:$PATH"
+    export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$GRADLE_HOME/bin:$PATH"
     
     # Fix: create ~/.androidide/aapt2 symlink for AGP to find aapt2 on arm64 host
     mkdir -p "$HOME/.androidide"
-    ln -sf "$(command -v aapt2)" "$HOME/.androidide/aapt2"
+    ln -sf "$(command -v aapt2)" "$HOME/.androidide/aapt2" 2>/dev/null || true
     
     # Fix: ensure ~/.gradle/gradle.properties points to the arm64 aapt2
     mkdir -p "$HOME/.gradle"
@@ -331,10 +292,10 @@ configure_env() {
 }
 
 # ============================================================
-# 6. SDK 组件
+# 5. SDK 组件
 # ============================================================
 install_sdk_components() {
-    log "[6/6] 检查并安装 SDK 组件..."
+    log "[5/5] 检查并安装 SDK 组件..."
     
     local sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
     
@@ -384,6 +345,138 @@ install_sdk_components() {
 }
 
 # ============================================================
+# 6. NDK（最后一步，用户选择）
+# ============================================================
+install_ndk_r24() {
+    log "[6/6] 检查 NDK r24 (aarch64)..."
+    if [ -x "$ANDROID_NDK_HOME_R24/ndk-build" ]; then
+        log "  NDK r24 已存在 ✓"
+        return 0
+    fi
+    
+    mkdir -p "$ANDROID_HOME/ndk"
+    local zip_file="$ANDROID_HOME/ndk/android-ndk-r24-aarch64.zip"
+    
+    cd "$ANDROID_HOME/ndk"
+    log "  下载 NDK r24 (aarch64)..."
+    wget --show-progress -c -O "$zip_file" "$NDK_R24_URL" || \
+        error_exit "下载 NDK r24 失败，请检查网络"
+    
+    if [ ! -s "$zip_file" ]; then
+        error_exit "NDK r24 下载文件为空，请检查网络"
+    fi
+    
+    log "  解压 NDK r24..."
+    rm -rf "$NDK_R24_VERSION" "android-ndk-r24"
+    unzip -q -o "$zip_file" || error_exit "解压 NDK r24 失败"
+    mv android-ndk-r24 "$NDK_R24_VERSION"
+    rm -f "$zip_file"
+    
+    if [ -x "$ANDROID_NDK_HOME_R24/ndk-build" ]; then
+        log "  NDK r24 安装完成 ✓"
+    else
+        error_exit "NDK r24 安装不完整"
+    fi
+    
+    # Fix: NDK r24 uses linux-aarch64, but AGP expects linux-x86_64
+    log "  修复 NDK r24 arm64 主机兼容性..."
+    ln -sf linux-aarch64 "$ANDROID_NDK_HOME_R24/prebuilt/linux-x86_64"
+    ln -sf linux-aarch64 "$ANDROID_NDK_HOME_R24/toolchains/llvm/prebuilt/linux-x86_64"
+    log "  NDK r24 符号链接修复完成 ✓"
+}
+
+install_ndk_r29() {
+    log "[6/6] 检查 NDK r29 (aarch64)..."
+    if [ -x "$ANDROID_NDK_HOME_R29/ndk-build" ]; then
+        log "  NDK r29 已存在 ✓"
+        return 0
+    fi
+    
+    mkdir -p "$HOME"
+    mkdir -p "$ANDROID_HOME/ndk"
+    local tar_file="$HOME/android-ndk-r29-aarch64.tar.gz"
+    
+    cd "$HOME"
+    log "  下载 NDK r29 (aarch64)..."
+    wget --show-progress -c -O "$tar_file" "$NDK_R29_URL" || \
+        error_exit "下载 NDK r29 失败，请检查网络"
+    
+    if [ ! -s "$tar_file" ]; then
+        error_exit "NDK r29 下载文件为空，请检查网络"
+    fi
+    
+    log "  解压 NDK r29..."
+    rm -rf "$ANDROID_NDK_HOME_R29" "ndk"
+    tar -xzf "$tar_file" || error_exit "解压 NDK r29 失败"
+    mv ndk "$ANDROID_NDK_HOME_R29"
+    rm -f "$tar_file"
+    
+    if [ -x "$ANDROID_NDK_HOME_R29/ndk-build" ]; then
+        log "  NDK r29 安装完成 ✓"
+    else
+        error_exit "NDK r29 安装不完整"
+    fi
+}
+
+select_ndk() {
+    echo ""
+    echo "========================================"
+    echo "  选择 NDK 版本"
+    echo "========================================"
+    echo ""
+    echo "1) 下载并安装 NDK r24 (aarch64)"
+    echo "   路径: $ANDROID_NDK_HOME_R24"
+    echo ""
+    echo "2) 下载并安装 NDK r29 (aarch64)"
+    echo "   路径: $ANDROID_NDK_HOME_R29"
+    echo "   链接: $NDK_R29_URL"
+    echo ""
+    echo "3) 全部下载并安装 (r24 + r29)"
+    echo ""
+    echo "4) 跳过 NDK 安装"
+    echo ""
+    read -p "请选择 [1-4]: " ndk_choice
+    case "$ndk_choice" in
+        1)
+            install_ndk_r24
+            export ANDROID_NDK_HOME="$ANDROID_NDK_HOME_R24"
+            ;;
+        2)
+            install_ndk_r29
+            export ANDROID_NDK_HOME="$ANDROID_NDK_HOME_R29"
+            ;;
+        3)
+            install_ndk_r24
+            install_ndk_r29
+            export ANDROID_NDK_HOME="$ANDROID_NDK_HOME_R29"
+            ;;
+        4)
+            log "跳过 NDK 安装"
+            if [ -x "$ANDROID_NDK_HOME_R24/ndk-build" ]; then
+                export ANDROID_NDK_HOME="$ANDROID_NDK_HOME_R24"
+            elif [ -x "$ANDROID_NDK_HOME_R29/ndk-build" ]; then
+                export ANDROID_NDK_HOME="$ANDROID_NDK_HOME_R29"
+            fi
+            ;;
+        *)
+            log "无效选择，跳过 NDK 安装"
+            ;;
+    esac
+    
+    # 将 ANDROID_NDK_HOME 写入 shell rc
+    local BASHRC="$HOME/.bashrc"
+    [ -f "$HOME/.zshrc" ] && BASHRC="$HOME/.zshrc"
+    if [ -n "${ANDROID_NDK_HOME:-}" ]; then
+        if ! grep -q "^export ANDROID_NDK_HOME=" "$BASHRC" 2>/dev/null; then
+            echo "export ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> "$BASHRC"
+        else
+            sed -i "s|^export ANDROID_NDK_HOME=.*|export ANDROID_NDK_HOME=$ANDROID_NDK_HOME|" "$BASHRC"
+        fi
+        export PATH="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-aarch64/bin:$ANDROID_NDK_HOME:$PATH"
+    fi
+}
+
+# ============================================================
 # 完整性检查
 # ============================================================
 integrity_check() {
@@ -396,67 +489,98 @@ integrity_check() {
     [ -d "$ANDROID_HOME/platforms/android-34" ] && log "  [OK] platforms;android-34" || { log "  [FAIL] platforms;android-34 缺失"; failed=1; }
     [ -x "$ANDROID_HOME/build-tools/34.0.0/aapt" ] && log "  [OK] build-tools;34.0.0" || { log "  [FAIL] build-tools;34.0.0 缺失"; failed=1; }
     [ -x "$GRADLE_HOME/bin/gradle" ] && log "  [OK] Gradle ${GRADLE_VERSION}" || { log "  [FAIL] Gradle ${GRADLE_VERSION} 缺失"; failed=1; }
-    [ -x "$ANDROID_NDK_HOME/ndk-build" ] && log "  [OK] NDK r24" || { log "  [FAIL] NDK r24 缺失"; failed=1; }
+    
+    if [ -n "${ANDROID_NDK_HOME:-}" ] && [ -x "$ANDROID_NDK_HOME/ndk-build" ]; then
+        log "  [OK] NDK ($ANDROID_NDK_HOME)"
+    else
+        log "  [INFO] NDK 未安装或未选择"
+    fi
     
     log ""
     [ "$failed" -eq 1 ] && { log "警告：部分组件未安装成功！请检查网络后重新运行此脚本"; return 1; }
-    log "所有组件安装完整 ✓"
+    log "核心组件安装完整 ✓"
     return 0
 }
 
 # ============================================================
-# 主流程
+# 卸载
 # ============================================================
-main() {
-    log "========================================"
-    log " Android 开发环境一键安装"
-    log "========================================"
-    log "安装目标:"
-    log "  ANDROID_HOME:    $ANDROID_HOME"
-    log "  GRADLE_HOME:     $GRADLE_HOME"
-    log "  ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
-    log ""
+uninstall_all() {
+    log "=== 开始卸载 Android 开发环境 ==="
     
-    acquire_lock
+    local BASHRC="$HOME/.bashrc"
+    [ -f "$HOME/.zshrc" ] && BASHRC="$HOME/.zshrc"
     
-    if ! has_cmd pkg; then
-        error_exit "此脚本仅适用于 Termux 环境"
+    # 清理环境变量
+    log "清理环境变量配置..."
+    sed -i '/^export ANDROID_HOME=/d' "$BASHRC" 2>/dev/null || true
+    sed -i '/^export GRADLE_HOME=/d' "$BASHRC" 2>/dev/null || true
+    sed -i '/^export ANDROID_NDK_HOME=/d' "$BASHRC" 2>/dev/null || true
+    sed -i '/^export PATH=.*android-sdk\/cmdline-tools/d' "$BASHRC" 2>/dev/null || true
+    sed -i '/^export PATH=.*gradle/d' "$BASHRC" 2>/dev/null || true
+    sed -i '/^export PATH=.*android-ndk/d' "$BASHRC" 2>/dev/null || true
+    
+    # 取消当前会话环境变量
+    unset ANDROID_HOME
+    unset GRADLE_HOME
+    unset ANDROID_NDK_HOME
+    export PATH="$(echo "$PATH" | tr ':' '\n' | grep -v -E '(android-sdk/cmdline-tools|gradle/bin|android-ndk|jdk/bin)' | tr '\n' ':' | sed 's/:$//')"
+    
+    log "环境变量已清理 ✓"
+    
+    # 删除目录
+    log "删除安装目录..."
+    for d in "$ANDROID_NDK_HOME_R24" "$ANDROID_NDK_HOME_R29" "$ANDROID_HOME" "$GRADLE_HOME" "$HOME/jdk"; do
+        if [ -d "$d" ]; then
+            log "  删除 $d"
+            rm -rf "$d"
+        else
+            log "  $d 不存在，跳过"
+        fi
+    done
+    
+    # 清理 gradle.properties 中的 aapt2 配置
+    if [ -f "$HOME/.gradle/gradle.properties" ]; then
+        sed -i '/^android.aapt2FromMavenOverride=/d' "$HOME/.gradle/gradle.properties" 2>/dev/null || true
     fi
     
-    log "检查 Termux 镜像源..."
-    if ! pkg update -y >/dev/null 2>&1; then
-        log "镜像源不可用，尝试修复..."
-        fix_termux_mirror tuna || fix_termux_mirror ustc
-        pkg update -y || error_exit "pkg 更新失败，请检查网络"
-    else
-        log "镜像源正常 ✓"
-    fi
-    
-    install_dependencies
-    install_cmdline_tools
-    install_gradle
-    install_ndk
-    configure_env
-    install_sdk_components
-    
     log ""
-    integrity_check
-    
-    log ""
-    log "========================================"
-    log " 安装完成！"
-    log "========================================"
-    log "请执行以下命令使环境变量生效："
-    log "  source ~/.bashrc"
-    log "  或 source ~/.zshrc"
-    log ""
-    log "验证安装："
-    log "  java -version"
-    log "  gradle --version"
-    log "  echo \$ANDROID_NDK_HOME"
-    log ""
-    
-    release_lock
+    log "卸载完成！"
+    log "请执行 'source $BASHRC' 或重新打开终端以使环境变量完全清除。"
 }
 
-main "$@"
+# ============================================================
+# 菜单
+# ============================================================
+menu() {
+    clear
+    echo "========================================"
+    echo "  Android 开发环境管理脚本"
+    echo "========================================"
+    echo ""
+    echo "脚本目录: $HOME/android-sdk (若已安装)"
+    echo ""
+    echo "1) 安装 (在线下载)"
+    echo "2) 卸载"
+    echo "3) 退出"
+    echo ""
+    read -p "请选择操作 [1-3]: " choice
+    case "$choice" in
+        1)
+            main_install
+            ;;
+        2)
+            uninstall_all
+            ;;
+        3)
+            exit 0
+            ;;
+        *)
+            log "无效选择"
+            sleep 2
+            menu
+            ;;
+    esac
+}
+
+menu
