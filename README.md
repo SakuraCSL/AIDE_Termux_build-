@@ -27,7 +27,21 @@
 
 ## 🚀 快速开始
 
-### 方式一：在线安装（推荐）
+### 方式一：一行命令安装（推荐）
+
+无需克隆仓库，直接通过 bash 远程执行安装脚本：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/SakuraCSL/AIDE_Termux_build-/main/install.sh)
+```
+
+或使用 wget：
+
+```bash
+bash <(wget -qO- https://raw.githubusercontent.com/SakuraCSL/AIDE_Termux_build-/main/install.sh)
+```
+
+### 方式二：克隆仓库后安装
 
 ```bash
 # 1. 克隆仓库
@@ -41,7 +55,7 @@ bash install.sh
 source ~/.bashrc  # 或 source ~/.zshrc
 ```
 
-### 方式二：网络安装（使用 Release 资产）
+### 方式三：网络安装（使用 Release 资产）
 
 如果在线安装失败，可使用此脚本从 Release Assets 下载所有组件：
 
@@ -129,12 +143,21 @@ echo $GRADLE_HOME
 
 ## 🛠️ 使用已安装环境
 
-安装完成后，你可以使用仓库提供的测试项目进行验证：
+### 下载测试项目
+
+直接下载示例项目（无需克隆仓库）：
 
 ```bash
-# 下载测试项目（从 Release v2.0）
+# 从 Release v2.0 下载
 wget https://github.com/SakuraCSL/AIDE_Termux_build-/releases/download/v2.0/test-project.zip
 
+# 或使用 curl
+curl -L -o test-project.zip https://github.com/SakuraCSL/AIDE_Termux_build-/releases/download/v2.0/test-project.zip
+```
+
+### 构建验证
+
+```bash
 # 解压测试项目
 unzip test-project.zip
 cd test-project
