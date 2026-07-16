@@ -49,13 +49,15 @@
 无需克隆仓库，直接通过 bash 远程执行安装脚本：
 
 ```bash
+# 在线安装（从网络下载）
 bash <(curl -fsSL https://raw.githubusercontent.com/SakuraCSL/AIDE_Termux_build-/main/install.sh)
-```
-
-或使用 wget：
-
-```bash
+# 或
 bash <(wget -qO- https://raw.githubusercontent.com/SakuraCSL/AIDE_Termux_build-/main/install.sh)
+
+# 网络安装（从 Release 下载，推荐）
+bash <(curl -fsSL https://raw.githubusercontent.com/SakuraCSL/AIDE_Termux_build-/main/local_install.sh)
+# 或
+bash <(wget -qO- https://raw.githubusercontent.com/SakuraCSL/AIDE_Termux_build-/main/local_install.sh)
 ```
 
 ### 方式二：克隆仓库后安装
@@ -66,39 +68,9 @@ git clone https://github.com/SakuraCSL/AIDE_Termux_build-.git
 cd AIDE_Termux_build-
 
 # 2. 运行安装脚本
-bash install.sh
-
-# 3. 使环境变量生效
-source ~/.bashrc  # 或 source ~/.zshrc
-```
-
-### 方式二：一行命令安装（推荐）
-
-无需克隆仓库，直接通过 bash 远程执行安装脚本：
-
-```bash
-# 方式二-A：在线安装（从网络下载）
-bash <(curl -fsSL https://raw.githubusercontent.com/SakuraCSL/AIDE_Termux_build-/main/install.sh)
-# 或
-bash <(wget -qO- https://raw.githubusercontent.com/SakuraCSL/AIDE_Termux_build-/main/install.sh)
-
-# 方式二-B：网络安装（从 Release 下载）
-bash <(curl -fsSL https://raw.githubusercontent.com/SakuraCSL/AIDE_Termux_build-/main/local_install.sh)
-# 或
-bash <(wget -qO- https://raw.githubusercontent.com/SakuraCSL/AIDE_Termux_build-/main/local_install.sh)
-```
-
-### 方式三：克隆仓库后安装
-
-```bash
-# 1. 克隆仓库
-git clone https://github.com/SakuraCSL/AIDE_Termux_build-.git
-cd AIDE_Termux_build-
-
-# 2. 运行安装脚本
 bash install.sh        # 在线安装
 # 或
-bash local_install.sh  # 网络安装
+bash local_install.sh  # 网络安装（推荐）
 
 # 3. 使环境变量生效
 source ~/.bashrc  # 或 source ~/.zshrc
@@ -215,7 +187,7 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 
 若仍失败，可：
 - 更换网络环境（建议使用 WiFi）
-- 使用方式二的本地离线安装
+- 使用方式二的网络安装（local_install.sh）
 
 ### 2. 提示 "Permission denied"
 
@@ -232,7 +204,7 @@ bash install.sh
 # 选择 2) 卸载
 ```
 
-#### 本地安装卸载
+#### 网络安装卸载
 ```bash
 bash local_install.sh
 # 选择 2) 卸载
