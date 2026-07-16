@@ -15,8 +15,25 @@
 | ✅ **完整性检查** | 自动验证所有组件是否正确安装 |
 | 🔒 **防重复运行** | 锁文件机制避免并发/重复执行 |
 | 🛠️ **镜像修复** | 自动切换清华/中科大镜像解决网络问题 |
-| 📦 **离线安装** | 提供本地安装脚本，无需网络即可部署 |
+| 📦 **网络安装** | 从 Release Assets 下载所有离线包（推荐） |
 | 🎯 **NDK 可选** | 支持选择 NDK r24 或 r29，或两者都装 |
+| 🌐 **远程执行** | 无需克隆仓库，一行命令即可安装 |
+
+## 🔍 两种安装方式对比
+
+### 方式一：在线安装（install.sh）
+
+- **来源**：各组件官方/第三方原始链接
+- **优点**：不需要 Release，直接下载
+- **缺点**：第三方链接容易失效，部分资源海外下载慢
+- **适用**：网络良好且能访问海外资源的场景
+
+### 方式二：网络安装（local_install.sh）⭐ 推荐
+
+- **来源**：Release v2.0 Assets（由仓库维护者提供的镜像）
+- **优点**：链接稳定、国内可访问、统一镜像
+- **缺点**：依赖 Release 是否完整
+- **适用**：绝大多数用户（推荐）
 
 ## 📦 环境要求
 
@@ -55,17 +72,33 @@ bash install.sh
 source ~/.bashrc  # 或 source ~/.zshrc
 ```
 
-### 方式三：网络安装（使用 Release 资产）
+### 方式二：一行命令安装（推荐）
 
-如果在线安装失败，可使用此脚本从 Release Assets 下载所有组件：
+无需克隆仓库，直接通过 bash 远程执行安装脚本：
+
+```bash
+# 方式二-A：在线安装（从网络下载）
+bash <(curl -fsSL https://raw.githubusercontent.com/SakuraCSL/AIDE_Termux_build-/main/install.sh)
+# 或
+bash <(wget -qO- https://raw.githubusercontent.com/SakuraCSL/AIDE_Termux_build-/main/install.sh)
+
+# 方式二-B：网络安装（从 Release 下载）
+bash <(curl -fsSL https://raw.githubusercontent.com/SakuraCSL/AIDE_Termux_build-/main/local_install.sh)
+# 或
+bash <(wget -qO- https://raw.githubusercontent.com/SakuraCSL/AIDE_Termux_build-/main/local_install.sh)
+```
+
+### 方式三：克隆仓库后安装
 
 ```bash
 # 1. 克隆仓库
 git clone https://github.com/SakuraCSL/AIDE_Termux_build-.git
 cd AIDE_Termux_build-
 
-# 2. 运行网络安装脚本
-bash local_install.sh
+# 2. 运行安装脚本
+bash install.sh        # 在线安装
+# 或
+bash local_install.sh  # 网络安装
 
 # 3. 使环境变量生效
 source ~/.bashrc  # 或 source ~/.zshrc
@@ -106,6 +139,8 @@ AIDE_Termux_build-/
 
 ### 在线安装（install.sh）
 
+从各组件官方/第三方链接直接下载：
+
 1. **检查基础依赖** - 安装 OpenJDK 21、wget、unzip、xz-utils、aapt2
 2. **安装 cmdline-tools** - Android SDK 命令行工具
 3. **安装 Gradle** - 项目构建工具
@@ -113,9 +148,9 @@ AIDE_Termux_build-/
 5. **安装 SDK 组件** - platform-tools、platforms、build-tools
 6. **选择 NDK** - 可选择 r24、r29 或两者都安装
 
-### 网络安装（local_install.sh）
+### 网络安装（local_install.sh）⭐ 推荐
 
-从 Release Assets 下载所有离线包并安装：
+从 Release v2.0 Assets 下载所有离线包并安装：
 
 1. **下载 JDK** - 从 Release v2.0 下载 `JDK_21.tar.gz` 并解压到 `~/jdk`
 2. **下载 Gradle** - 从 Release v2.0 下载 `gradle.tar.gz` 并解压到 `~/gradle`
