@@ -59,18 +59,27 @@ install_dependencies() {
     apt-get update -qq || log "警告: apt-get update 失败，继续..."
     
     # 安装必要工具
-    local deps="wget unzip xz-utils"
+    # 命令到包名的映射
+    declare -A cmd_to_pkg=(
+        [wget]="wget"
+        [unzip]="unzip"
+        [tar]="tar"
+        [xz]="xz-utils"
+    )
+    
     local missing=()
+    local missing_pkgs=()
     
     for cmd in wget unzip tar xz; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
             missing+=("$cmd")
+            missing_pkgs+=("${cmd_to_pkg[$cmd]}")
         fi
     done
     
     if [ ${#missing[@]} -gt 0 ]; then
-        log "安装缺失依赖: ${missing[*]}"
-        apt-get install -y "${missing[@]}" || error_exit "安装依赖失败"
+        log "安装缺失依赖: ${missing[*]} -> ${missing_pkgs[*]}"
+        apt-get install -y "${missing_pkgs[@]}" || error_exit "安装依赖失败"
     else
         log "依赖已满足 ✓"
     fi
